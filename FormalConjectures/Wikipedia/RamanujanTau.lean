@@ -41,7 +41,17 @@ noncomputable def τ (n : ℕ) : ℤ := PowerSeries.coeff n Δ
 
 @[category API, AMS 11]
 lemma multipliable : Multipliable fun n : ℕ+ ↦ ((1 - X ^ (n : ℕ)) ^ 24 : PowerSeries ℤ) := by
-  sorry
+  have hbase : Multipliable fun n : ℕ+ ↦ ((1 - X ^ (n : ℕ)) : PowerSeries ℤ) := by
+    apply (multipliable_pnat_iff_multipliable_succ
+      (f := fun n : ℕ ↦ ((1 - X ^ n) : PowerSeries ℤ))).2
+    simpa using multipliable_one_sub_X_pow ℤ
+  have hpow (k : ℕ) :
+      Multipliable fun n : ℕ+ ↦ ((1 - X ^ (n : ℕ)) ^ k : PowerSeries ℤ) := by
+    induction k with
+    | zero => simpa only [pow_zero] using
+        (multipliable_one : Multipliable (fun _ : ℕ+ ↦ (1 : PowerSeries ℤ)))
+    | succ k ih => simpa [pow_succ] using ih.mul hbase
+  exact hpow 24
 
 @[category test, AMS 11]
 lemma τ_zero : τ 0 = 0 := by simp [τ, Δ]
