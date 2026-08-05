@@ -53,7 +53,42 @@ lemma τ_one : τ 1 = 1 := by
 
 @[category test, AMS 11]
 lemma τ_two : τ 2 = -24 := by
-  sorry
+  let factor (n : ℕ+) : PowerSeries ℤ := (1 - X ^ (n : ℕ)) ^ 24
+  have factor_constantCoeff (n : ℕ+) : constantCoeff (factor n) = 1 := by
+    simp [factor]
+  have factor_coeff_one (n : ℕ+) :
+      coeff 1 (factor n) = if n = 1 then -24 else 0 := by
+    by_cases h : n = 1
+    · subst n
+      norm_num [factor, coeff_one_pow, coeff_X_pow]
+    · have hn : (n : ℕ) ≠ 1 := by simpa using h
+      simp [factor, coeff_one_pow, coeff_X_pow, h, hn.symm]
+  have coeff_one_prod (s : Finset ℕ+) :
+      coeff 1 (∏ n ∈ s, factor n) = if 1 ∈ s then -24 else 0 := by
+    classical
+    induction s using Finset.induction_on with
+    | empty => simp
+    | insert a s ha ih =>
+        rw [Finset.prod_insert ha, coeff_one_mul, ih]
+        by_cases h : a = 1
+        · subst a
+          simp [factor_constantCoeff, factor_coeff_one, ha]
+        · simp [factor_constantCoeff, factor_coeff_one, h, Ne.symm h]
+  have hprod : Multipliable factor := by
+    simpa [factor] using multipliable
+  have hlim : Filter.Tendsto
+      (fun s : Finset ℕ+ ↦ coeff 1 (∏ n ∈ s, factor n)) Filter.atTop
+      (nhds (coeff 1 (∏' n : ℕ+, factor n))) :=
+    ((continuous_coeff ℤ 1).tendsto _).comp hprod.hasProd
+  have hconst : Filter.Tendsto
+      (fun s : Finset ℕ+ ↦ coeff 1 (∏ n ∈ s, factor n)) Filter.atTop (nhds (-24)) :=
+    tendsto_atTop_of_eventually_const (i₀ := {1}) fun s hs ↦ by
+      rw [coeff_one_prod]
+      have h1 : (1 : ℕ+) ∈ s := Finset.singleton_subset_iff.mp hs
+      simp only [if_pos h1]
+  have coeff_one_tprod : coeff 1 (∏' n : ℕ+, factor n) = -24 :=
+    tendsto_nhds_unique hlim hconst
+  simpa [τ, Δ, factor] using coeff_one_tprod
 
 
 /-- The Ramanujan-Petersson conjecture: $|\tau(p)| \le 2 p^{11/2}$ for primes $p$. -/
