@@ -58,11 +58,67 @@ theorem finiteAdditiveConvolution_comm (n : ℕ) (p q : F[X]) :
   exact sum_congr rfl fun m hm =>
     (congr_arg₂ _) (sum_equiv (.prodComm _ _) (by simp [add_comm]) fun _ _ => by ring!) rfl
 
+/-- The finite additive convolution of two degree-$n$ real polynomials has degree $n$. -/
 @[category test, AMS 26]
 theorem finiteAdditiveConvolution_degree (n : ℕ) (p q : ℝ[X])
-  (hp : p.degree = n) (hq : q.degree = n):
+  (hp : p.degree = n) (hq : q.degree = n) :
     (p (⊞_n) q).degree = n := by
-  sorry
+  have hp_ne : p ≠ 0 := by
+    intro h
+    rw [h] at hp
+    simp at hp
+  have hq_ne : q ≠ 0 := by
+    intro h
+    rw [h] at hq
+    simp at hq
+  have hp_nat : p.natDegree = n := natDegree_eq_of_degree_eq_some hp
+  have hq_nat : q.natDegree = n := natDegree_eq_of_degree_eq_some hq
+  have hp_coeff : p.coeff n ≠ 0 := by
+    rw [← hp_nat, coeff_natDegree]
+    exact leadingCoeff_ne_zero.mpr hp_ne
+  have hq_coeff : q.coeff n ≠ 0 := by
+    rw [← hq_nat, coeff_natDegree]
+    exact leadingCoeff_ne_zero.mpr hq_ne
+  have hc0 : ∑ ij ∈ antidiagonal 0,
+      ((n - ij.1)! * (n - ij.2)! : ℝ) / (n ! * (n - 0)! : ℝ) *
+        p.coeff (n - ij.1) * q.coeff (n - ij.2) = p.coeff n * q.coeff n := by
+    rw [antidiagonal_zero]
+    simp
+    have hfac : (n ! : ℝ) ≠ 0 := by positivity
+    simp [hfac]
+  have hcoeff : (finiteAdditiveConvolution n p q).coeff n = p.coeff n * q.coeff n := by
+    simp only [finiteAdditiveConvolution]
+    rw [Polynomial.finset_sum_coeff]
+    conv_lhs =>
+      arg 2
+      ext k
+      rw [Polynomial.coeff_smul, Polynomial.coeff_X_pow]
+    simp only [smul_eq_mul]
+    rw [Finset.sum_eq_single 0]
+    · simpa using hc0
+    · intro k hk hk0
+      have hklt : k < n + 1 := Finset.mem_range.mp hk
+      have : n ≠ n - k := by omega
+      simp [this]
+    · intro h
+      exact absurd (Finset.mem_range.mpr (by omega)) h
+  have hcoeff_ne : (finiteAdditiveConvolution n p q).coeff n ≠ 0 := by
+    rw [hcoeff]
+    exact mul_ne_zero hp_coeff hq_coeff
+  have hupper : (finiteAdditiveConvolution n p q).natDegree ≤ n := by
+    simp only [finiteAdditiveConvolution]
+    apply (Polynomial.natDegree_sum_le _ _).trans
+    apply Finset.sup_le
+    intro k hk
+    apply (Polynomial.natDegree_smul_le _ _).trans
+    exact (Polynomial.natDegree_X_pow_le (n - k)).trans (Nat.sub_le n k)
+  have hnat : (finiteAdditiveConvolution n p q).natDegree = n :=
+    le_antisymm hupper (Polynomial.le_natDegree_of_ne_zero hcoeff_ne)
+  have hne : finiteAdditiveConvolution n p q ≠ 0 := by
+    intro hzero
+    rw [hzero] at hcoeff_ne
+    simp at hcoeff_ne
+  rw [Polynomial.degree_eq_natDegree hne, hnat]
 
 @[category test, AMS 26]
 theorem finiteAdditiveConvolution_monic' (n : ℕ) (p q : ℝ[X]) (hn : 0 < n)
