@@ -57,7 +57,47 @@ Note it is trivial that $\sum f(u_i)=\binom{n}{2}$.
 @[category test, AMS 5 52]
 theorem erdos_94.variants.sum_multiplicity (P : Finset ℝ²) :
     ∑ u ∈ distanceSet P, distanceMultiplicity P u = P.card.choose 2 := by
-  sorry
+  classical
+  let f : ℝ² × ℝ² → ℝ := fun pair => dist pair.1 pair.2
+  have h_two_mul (u : ℝ) :
+      2 * ((P.offDiag.filter fun pair => f pair = u).image Sym2.mk).card =
+        (P.offDiag.filter fun pair => f pair = u).card := by
+    rw [Finset.card_eq_sum_card_image (Sym2.mk : ℝ² × ℝ² → Sym2 ℝ²),
+      Finset.sum_const_nat (Sym2.ind _), mul_comm]
+    rintro x y hxy
+    simp only [Finset.mem_image, Finset.mem_filter, Finset.mem_offDiag] at hxy
+    obtain ⟨⟨a, b⟩, ⟨⟨ha, hb, hab⟩, hd⟩, hmk⟩ := hxy
+    have hxy : x ∈ P ∧ y ∈ P ∧ x ≠ y ∧ f (x, y) = u := by
+      obtain h | h := Sym2.mk_eq_mk_iff.1 hmk
+      · simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨ha, hb, hab, hd⟩
+      · simp only [Prod.mk.injEq, Prod.swap_prod_mk] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨hb, ha, hab.symm, by simpa [f, dist_comm] using hd⟩
+    have hfiber :
+        {z ∈ P.offDiag.filter (fun pair => f pair = u) |
+            Sym2.mk z = s(x, y)} = {(x, y), (y, x)} := by
+      ext ⟨x₁, y₁⟩
+      simp only [Finset.mem_filter, Finset.mem_offDiag, Finset.mem_insert,
+        Finset.mem_singleton, Sym2.eq_iff, Prod.mk.injEq]
+      constructor
+      · rintro ⟨_, hEq⟩
+        exact hEq
+      · rintro (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩)
+        · exact ⟨⟨⟨hxy.1, hxy.2.1, hxy.2.2.1⟩, hxy.2.2.2⟩,
+            Or.inl ⟨rfl, rfl⟩⟩
+        · exact ⟨⟨⟨hxy.2.1, hxy.1, hxy.2.2.1.symm⟩,
+            by simpa [f, dist_comm] using hxy.2.2.2⟩, Or.inr ⟨rfl, rfl⟩⟩
+    rw [hfiber, Finset.card_insert_of_notMem, Finset.card_singleton]
+    simp [hxy.2.2.1]
+  have h_even (u : ℝ) : 2 ∣ (P.offDiag.filter fun pair => f pair = u).card :=
+    ⟨((P.offDiag.filter fun pair => f pair = u).image Sym2.mk).card,
+      (h_two_mul u).symm⟩
+  change ∑ u ∈ P.offDiag.image f,
+      (P.offDiag.filter fun pair => f pair = u).card / 2 = P.card.choose 2
+  rw [← Nat.sum_div (fun u _ => h_even u), ← Finset.card_eq_sum_card_image]
+  simp [Finset.offDiag_card, Nat.choose_two_right, Nat.mul_sub_left_distrib]
 
 /--
 Lefmann and Theile [LeTh95] prove a stronger version of this question, that
